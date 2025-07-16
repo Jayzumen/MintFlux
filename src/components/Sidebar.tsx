@@ -41,7 +41,7 @@ export const Sidebar = () => {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
+        className="absolute top-4 right-4 z-50 md:hidden"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       >
         {isMobileMenuOpen ? (
@@ -105,7 +105,7 @@ export const Sidebar = () => {
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
-          className="bg-opacity-50 fixed inset-0 z-30 bg-black md:hidden"
+          className="bg-opacity-50 fixed inset-0 z-30 bg-gray-100 md:hidden dark:bg-gray-900"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
