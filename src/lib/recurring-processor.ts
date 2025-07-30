@@ -30,57 +30,51 @@ export class RecurringTransactionProcessor {
     try {
       const recurringTransactions = await getRecurringTransactions(userId);
       const currentDate = new Date();
-      let processedCount = 0;
 
       for (const recurringTransaction of recurringTransactions) {
-        if (
-          shouldProcessRecurringTransaction(recurringTransaction, currentDate)
+        let nextDate = getNextOccurrenceDate(
+          recurringTransaction.startDate,
+          recurringTransaction.frequency,
+          recurringTransaction.lastProcessedDate,
+        );
+
+        while (
+          recurringTransaction.isActive &&
+          (!recurringTransaction.endDate || nextDate <= currentDate) &&
+          nextDate <= currentDate
         ) {
-          try {
-            // Create the new transaction
-            const transactionData = {
-              amount: recurringTransaction.amount,
-              type: recurringTransaction.type,
-              category: recurringTransaction.category,
-              description: recurringTransaction.description,
-              date: getNextOccurrenceDate(
-                recurringTransaction.startDate,
-                recurringTransaction.frequency,
-                recurringTransaction.lastProcessedDate,
-              ),
-            };
+          // 1. Create the transaction for nextDate
+          const transactionData = {
+            amount: recurringTransaction.amount,
+            type: recurringTransaction.type,
+            category: recurringTransaction.category,
+            description: recurringTransaction.description,
+            date: nextDate,
+          };
+          await addTransaction(userId, transactionData);
 
-            const { error } = await addTransaction(userId, transactionData);
+          // 2. Update lastProcessedDate
+          await updateRecurringTransaction(recurringTransaction.id, {
+            lastProcessedDate: nextDate,
+          });
 
-            if (error) {
-              console.error("Failed to create recurring transaction:", error);
-              continue;
-            }
+          // 3. Prepare for next loop
+          recurringTransaction.lastProcessedDate = nextDate;
+          nextDate = getNextOccurrenceDate(
+            recurringTransaction.startDate,
+            recurringTransaction.frequency,
+            recurringTransaction.lastProcessedDate,
+          );
 
-            // Update the last processed date
-            const nextOccurrenceDate = getNextOccurrenceDate(
-              recurringTransaction.startDate,
-              recurringTransaction.frequency,
-              recurringTransaction.lastProcessedDate,
-            );
-
+          // 4. Deactivate if endDate reached
+          if (
+            recurringTransaction.endDate &&
+            nextDate > recurringTransaction.endDate
+          ) {
             await updateRecurringTransaction(recurringTransaction.id, {
-              lastProcessedDate: nextOccurrenceDate,
+              isActive: false,
             });
-
-            processedCount++;
-
-            // Check if we've reached the end date
-            if (
-              recurringTransaction.endDate &&
-              nextOccurrenceDate >= recurringTransaction.endDate
-            ) {
-              await updateRecurringTransaction(recurringTransaction.id, {
-                isActive: false,
-              });
-            }
-          } catch (error) {
-            console.error("Error processing recurring transaction:", error);
+            break;
           }
         }
       }
