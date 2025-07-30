@@ -268,9 +268,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={selectedEndDate}
+                    selected={selectedEndDate || undefined}
                     onSelect={(date) => {
-                      setSelectedEndDate(date);
+                      setSelectedEndDate(date || null);
                       setValue("recurringEndDate", date);
                       setIsEndDateCalendarOpen(false);
                     }}
