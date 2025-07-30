@@ -56,6 +56,7 @@ import {
   downloadXLSX,
 } from "@/src/lib/csv";
 import { useAuth } from "@/src/hooks/useAuth";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import { useToast } from "@/src/hooks/use-toast";
 import {
   Plus,
@@ -78,6 +79,7 @@ import {
 
 export default function TransactionsPage() {
   const { user } = useAuth();
+  const { formatCurrency } = useUserSettings();
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -655,8 +657,8 @@ export default function TransactionsPage() {
                                 : "text-red-600"
                             }`}
                           >
-                            {transaction.type === "income" ? "+" : "-"}$
-                            {transaction.amount.toFixed(2)}
+                            {transaction.type === "income" ? "+" : "-"}
+                            {formatCurrency(transaction.amount)}
                           </span>
 
                           <div className="flex gap-2">

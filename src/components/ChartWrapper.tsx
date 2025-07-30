@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { Transaction } from "@/src/types/transaction";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import {
   PieChart,
   Pie,
@@ -46,6 +47,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
   type,
   title,
 }) => {
+  const { formatCurrency } = useUserSettings();
   const expenseTransactions = transactions.filter((t) => t.type === "expense");
 
   const categoryData = expenseTransactions.reduce(
@@ -107,10 +109,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => [
-                  `$${value.toFixed(2)}`,
-                  "Amount",
-                ]}
+                formatter={(value: number) => [formatCurrency(value), "Amount"]}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -123,7 +122,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Bar dataKey="income" fill="#10B981" name="Income" />
               <Bar dataKey="expense" fill="#EF4444" name="Expense" />
             </BarChart>
@@ -137,7 +136,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Line
                 type="monotone"
                 dataKey="income"

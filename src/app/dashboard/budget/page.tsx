@@ -38,6 +38,7 @@ import {
 } from "@/src/lib/budgets";
 import { subscribeToTransactions } from "@/src/lib/transactions";
 import { useAuth } from "@/src/hooks/useAuth";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import { useToast } from "@/src/hooks/use-toast";
 import { Plus, Edit, Trash2, Target } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -62,6 +63,7 @@ const budgetSchema = z.object({
 
 export default function BudgetPage() {
   const { user } = useAuth();
+  const { formatCurrency } = useUserSettings();
   const { toast } = useToast();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -446,8 +448,8 @@ export default function BudgetPage() {
                           <div className="flex justify-between text-sm">
                             <span>Spent</span>
                             <span className="font-medium">
-                              ${budget.spent.toFixed(2)} / $
-                              {budget.limit.toFixed(2)}
+                              {formatCurrency(budget.spent)} /{" "}
+                              {formatCurrency(budget.limit)}
                             </span>
                           </div>
                           <Progress
@@ -463,7 +465,7 @@ export default function BudgetPage() {
                           <div className="flex justify-between text-xs text-gray-500">
                             <span>{percentage.toFixed(1)}% used</span>
                             <span>
-                              ${(budget.limit - budget.spent).toFixed(2)}{" "}
+                              {formatCurrency(budget.limit - budget.spent)}{" "}
                               remaining
                             </span>
                           </div>

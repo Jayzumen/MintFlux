@@ -15,10 +15,12 @@ import { Budget } from "@/src/types/budget";
 import { subscribeToTransactions } from "@/src/lib/transactions";
 import { subscribeToBudgets } from "@/src/lib/budgets";
 import { useAuth } from "@/src/hooks/useAuth";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import { DollarSign, TrendingUp, TrendingDown, Target } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { formatCurrency } = useUserSettings();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +121,7 @@ export default function DashboardPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold">
-                      ${totalIncome.toFixed(2)}
+                      {formatCurrency(totalIncome)}
                     </span>
                     <TrendingUp className="h-6 w-6 opacity-80" />
                   </div>
@@ -135,7 +137,7 @@ export default function DashboardPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold">
-                      ${totalExpenses.toFixed(2)}
+                      {formatCurrency(totalExpenses)}
                     </span>
                     <TrendingDown className="h-6 w-6 opacity-80" />
                   </div>
@@ -151,7 +153,7 @@ export default function DashboardPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold">
-                      ${netWorth.toFixed(2)}
+                      {formatCurrency(netWorth)}
                     </span>
                     <DollarSign className="h-6 w-6 opacity-80" />
                   </div>
@@ -220,8 +222,8 @@ export default function DashboardPage() {
                                   : "text-red-600"
                               }`}
                             >
-                              {transaction.type === "income" ? "+" : "-"}$
-                              {transaction.amount.toFixed(2)}
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(transaction.amount)}
                             </p>
                             <p className="text-sm text-gray-500">
                               {transaction.date.toLocaleDateString()}

@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/src/components/ui/badge";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import { useAuth } from "@/src/hooks/useAuth";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import {
   BarChart3,
   PieChart,
@@ -36,6 +37,7 @@ import {
 
 export default function Homepage() {
   const { user, loading } = useAuth();
+  const { formatCurrency } = useUserSettings();
   const router = useRouter();
   const [showTestCredentials, setShowTestCredentials] = useState(false);
 
@@ -296,7 +298,9 @@ export default function Homepage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-green-100">Total Income</p>
-                      <p className="text-2xl font-bold">$5,240.00</p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(5240)}
+                      </p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-200" />
                   </div>
@@ -305,7 +309,9 @@ export default function Homepage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-red-100">Total Expenses</p>
-                      <p className="text-2xl font-bold">$3,180.00</p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(3180)}
+                      </p>
                     </div>
                     <BarChart3 className="h-8 w-8 text-red-200" />
                   </div>
@@ -314,7 +320,9 @@ export default function Homepage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-blue-100">Net Worth</p>
-                      <p className="text-2xl font-bold">$2,060.00</p>
+                      <p className="text-2xl font-bold">
+                        {formatCurrency(2060)}
+                      </p>
                     </div>
                     <DollarSign className="h-8 w-8 text-blue-200" />
                   </div>
@@ -330,15 +338,21 @@ export default function Homepage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Dining</span>
-                      <span className="text-sm font-medium">$680.00</span>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(680)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Transportation</span>
-                      <span className="text-sm font-medium">$420.00</span>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(420)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Shopping</span>
-                      <span className="text-sm font-medium">$350.00</span>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(350)}
+                      </span>
                     </div>
                   </div>
                 </div>

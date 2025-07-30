@@ -12,13 +12,19 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { AuthGuard } from "@/src/components/AuthGuard";
 import { useAuth } from "@/src/hooks/useAuth";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 import { useTheme } from "@/src/hooks/useTheme";
 import { useToast } from "@/src/hooks/use-toast";
 import { User, Moon, Sun, Save } from "lucide-react";
-import { saveUserSettings, getUserSettings } from "@/src/lib/settings";
+import { saveUserSettings } from "@/src/lib/settings";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const {
+    settings,
+    loading: settingsLoading,
+    refreshSettings,
+  } = useUserSettings();
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -30,28 +36,15 @@ export default function SettingsPage() {
   const [localTheme, setLocalTheme] = useState(theme);
 
   useEffect(() => {
-    if (!user) return;
-    setIsFetching(true);
-    getUserSettings(user.uid).then((settings) => {
-      if (settings) {
-        setDisplayName(settings.displayName || "");
-        setCurrency(settings.preferences.currency || "USD");
-        setDateFormat(settings.preferences.dateFormat || "MM/DD/YYYY");
-        if (
-          settings.preferences.theme &&
-          settings.preferences.theme !== theme
-        ) {
-          setLocalTheme(settings.preferences.theme);
-          if (settings.preferences.theme !== theme) {
-            toggleTheme();
-          }
-        }
-      } else {
-        setDisplayName(user.displayName || "");
-      }
-      setIsFetching(false);
-    });
-  }, [user]);
+    if (!settingsLoading && settings) {
+      setDisplayName(settings.displayName || "");
+      setCurrency(settings.preferences.currency || "USD");
+      setDateFormat(settings.preferences.dateFormat || "MM/DD/YYYY");
+    } else if (!settingsLoading && user) {
+      setDisplayName(user.displayName || "");
+    }
+    setIsFetching(false);
+  }, [settings, settingsLoading, user]);
 
   const handleSaveSettings = async () => {
     if (!user) return;
@@ -78,6 +71,8 @@ export default function SettingsPage() {
         title: "Success",
         description: "Settings saved successfully!",
       });
+      // Refresh the settings to update the UI immediately
+      await refreshSettings();
     }
     setIsLoading(false);
   };
@@ -165,13 +160,13 @@ export default function SettingsPage() {
                     >
                       {localTheme === "light" ? (
                         <>
-                          <Moon className="h-4 w-4" />
-                          Dark
+                          <Sun className="h-4 w-4" />
+                          Light
                         </>
                       ) : (
                         <>
-                          <Sun className="h-4 w-4" />
-                          Light
+                          <Moon className="h-4 w-4" />
+                          Dark
                         </>
                       )}
                     </Button>

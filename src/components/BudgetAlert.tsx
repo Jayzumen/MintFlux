@@ -3,12 +3,14 @@
 import { Alert, AlertDescription, AlertTitle } from "@/src/components/ui/alert";
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { Budget } from "@/src/types/budget";
+import { useUserSettings } from "@/src/hooks/useUserSettings";
 
 interface BudgetAlertProps {
   budget: Budget;
 }
 
 export const BudgetAlert: React.FC<BudgetAlertProps> = ({ budget }) => {
+  const { formatCurrency } = useUserSettings();
   const percentage = (budget.spent / budget.limit) * 100;
 
   if (percentage < 80) {
@@ -19,8 +21,8 @@ export const BudgetAlert: React.FC<BudgetAlertProps> = ({ budget }) => {
           {budget.category} Budget On Track
         </AlertTitle>
         <AlertDescription className="text-green-700 dark:text-green-300">
-          You've spent ${budget.spent.toFixed(2)} of ${budget.limit.toFixed(2)}{" "}
-          ({percentage.toFixed(1)}%)
+          You've spent {formatCurrency(budget.spent)} of{" "}
+          {formatCurrency(budget.limit)} ({percentage.toFixed(1)}%)
         </AlertDescription>
       </Alert>
     );
@@ -34,8 +36,8 @@ export const BudgetAlert: React.FC<BudgetAlertProps> = ({ budget }) => {
           {budget.category} Budget Warning
         </AlertTitle>
         <AlertDescription className="text-yellow-700 dark:text-yellow-300">
-          You've spent ${budget.spent.toFixed(2)} of ${budget.limit.toFixed(2)}{" "}
-          ({percentage.toFixed(1)}%)
+          You've spent {formatCurrency(budget.spent)} of{" "}
+          {formatCurrency(budget.limit)} ({percentage.toFixed(1)}%)
         </AlertDescription>
       </Alert>
     );
@@ -48,8 +50,8 @@ export const BudgetAlert: React.FC<BudgetAlertProps> = ({ budget }) => {
         {budget.category} Budget Exceeded
       </AlertTitle>
       <AlertDescription className="text-red-700 dark:text-red-300">
-        You've spent ${budget.spent.toFixed(2)} of ${budget.limit.toFixed(2)} (
-        {percentage.toFixed(1)}%)
+        You've spent {formatCurrency(budget.spent)} of{" "}
+        {formatCurrency(budget.limit)} ({percentage.toFixed(1)}%)
       </AlertDescription>
     </Alert>
   );
