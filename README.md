@@ -25,7 +25,7 @@ A modern, full-featured personal finance tracker built with Next.js 15, React, T
 - **UI:** Shadcn, Tailwind CSS
 - **Charts:** Recharts
 - **Auth & Data:** Firebase (Firestore, Auth)
-- **Linting/Formatting:** ESLint, Prettier
+- **Formatting:** Prettier
 
 ---
 
@@ -110,7 +110,6 @@ Visit [http://localhost:3000](http://localhost:3000) to view the app.
 - `dev` - Start development server
 - `build` - Build for production
 - `start` - Start production server
-- `lint` - Run ESLint
 - `format` - Run Prettier
 
 ---
