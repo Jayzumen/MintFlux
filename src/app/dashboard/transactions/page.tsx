@@ -38,6 +38,7 @@ import { TransactionForm } from "@/src/components/TransactionForm";
 import {
   Transaction,
   TransactionFormData,
+  RecurringTransaction,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
 } from "@/src/types/transaction";
@@ -49,6 +50,12 @@ import {
   deleteAllTransactions,
 } from "@/src/lib/transactions";
 import {
+  addRecurringTransaction,
+  subscribeToRecurringTransactions,
+  deleteRecurringTransaction,
+  getNextOccurrenceDate,
+} from "@/src/lib/recurring-transactions";
+import {
   exportTransactionsToCSV,
   exportTransactionsToXLSX,
   importTransactionsFromFile,
@@ -58,6 +65,7 @@ import {
 import { useAuth } from "@/src/hooks/useAuth";
 import { useUserSettings } from "@/src/hooks/useUserSettings";
 import { useToast } from "@/src/hooks/use-toast";
+import { useRecurringProcessor } from "@/src/hooks/useRecurringProcessor";
 import {
   Plus,
   Edit,
@@ -69,6 +77,7 @@ import {
   Filter,
   SortAsc,
   SortDesc,
+  Repeat,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,7 +90,11 @@ export default function TransactionsPage() {
   const { user } = useAuth();
   const { formatCurrency } = useUserSettings();
   const { toast } = useToast();
+  const { processNow } = useRecurringProcessor();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<
+    RecurringTransaction[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -107,32 +120,91 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (!user) return;
 
-    const unsubscribe = subscribeToTransactions(user.uid, (transactions) => {
-      setTransactions(transactions);
-      setLoading(false);
-    });
+    const unsubscribeTransactions = subscribeToTransactions(
+      user.uid,
+      (transactions) => {
+        setTransactions(transactions);
+        setLoading(false);
+      },
+    );
 
-    return unsubscribe;
+    const unsubscribeRecurring = subscribeToRecurringTransactions(
+      user.uid,
+      (recurringTransactions) => {
+        setRecurringTransactions(recurringTransactions);
+      },
+    );
+
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeRecurring();
+    };
   }, [user]);
 
   const handleAddTransaction = async (data: TransactionFormData) => {
     if (!user) return;
 
     setIsSubmitting(true);
-    const { error } = await addTransaction(user.uid, data);
 
-    if (error) {
+    try {
+      // Add the regular transaction
+      const { error: transactionError } = await addTransaction(user.uid, data);
+
+      if (transactionError) {
+        toast({
+          title: "Error",
+          description: transactionError,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If it's a recurring transaction, create the recurring template
+      if (data.isRecurring && data.recurringFrequency) {
+        const recurringData = {
+          amount: data.amount,
+          type: data.type,
+          category: data.category,
+          description: data.description,
+          startDate: data.date,
+          frequency: data.recurringFrequency,
+          endDate: data.recurringEndDate || null,
+          isActive: true,
+          lastProcessedDate: data.date,
+        };
+
+        const { error: recurringError } = await addRecurringTransaction(
+          user.uid,
+          recurringData,
+        );
+
+        if (recurringError) {
+          toast({
+            title: "Warning",
+            description:
+              "Transaction added but recurring setup failed: " + recurringError,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Recurring transaction added successfully!",
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: "Transaction added successfully!",
+        });
+      }
+
+      setIsAddDialogOpen(false);
+    } catch (error) {
       toast({
         title: "Error",
-        description: error,
+        description: "Failed to add transaction",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Transaction added successfully!",
-      });
-      setIsAddDialogOpen(false);
     }
 
     setIsSubmitting(false);
@@ -175,6 +247,23 @@ export default function TransactionsPage() {
       toast({
         title: "Success",
         description: "Transaction deleted successfully!",
+      });
+    }
+  };
+
+  const handleDeleteRecurringTransaction = async (id: string) => {
+    const { error } = await deleteRecurringTransaction(id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Recurring transaction deleted successfully!",
       });
     }
   };
@@ -412,6 +501,21 @@ export default function TransactionsPage() {
                 >
                   <Trash className="mr-2 h-4 w-4" />
                   Delete All
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await processNow();
+                    toast({
+                      title: "Success",
+                      description: "Recurring transactions processed!",
+                    });
+                  }}
+                  disabled={recurringTransactions.length === 0}
+                >
+                  <Repeat className="mr-2 h-4 w-4" />
+                  Process Recurring
                 </Button>
 
                 <Dialog
@@ -687,6 +791,88 @@ export default function TransactionsPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Recurring Transactions Section */}
+            {recurringTransactions.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Repeat className="h-5 w-5" />
+                    Recurring Transactions ({recurringTransactions.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recurringTransactions.map((recurringTransaction) => (
+                      <div
+                        key={recurringTransaction.id}
+                        className="flex items-center justify-between rounded-lg bg-blue-50 p-4 transition-colors hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`h-3 w-3 rounded-full ${
+                                recurringTransaction.type === "income"
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                            <div>
+                              <p className="font-medium">
+                                {recurringTransaction.description}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {recurringTransaction.category} •{" "}
+                                {recurringTransaction.frequency} •{" "}
+                                {recurringTransaction.startDate.toLocaleDateString()}
+                                {recurringTransaction.endDate &&
+                                  ` - ${recurringTransaction.endDate.toLocaleDateString()}`}
+                              </p>
+                              <p className="text-xs text-blue-600 dark:text-blue-400">
+                                Next:{" "}
+                                {getNextOccurrenceDate(
+                                  recurringTransaction.startDate,
+                                  recurringTransaction.frequency,
+                                  recurringTransaction.lastProcessedDate,
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`font-medium ${
+                              recurringTransaction.type === "income"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {recurringTransaction.type === "income" ? "+" : "-"}
+                            {formatCurrency(recurringTransaction.amount)}
+                          </span>
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleDeleteRecurringTransaction(
+                                  recurringTransaction.id,
+                                )
+                              }
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </main>
       </div>

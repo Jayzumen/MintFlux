@@ -21,7 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
 import {
@@ -29,6 +29,7 @@ import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
 } from "@/src/types/transaction";
+import { Switch } from "@/src/components/ui/switch";
 
 const transactionSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -36,6 +37,9 @@ const transactionSchema = z.object({
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
   date: z.date(),
+  isRecurring: z.boolean().optional(),
+  recurringFrequency: z.enum(["weekly", "monthly", "yearly"]).optional(),
+  recurringEndDate: z.date().optional().nullable(),
 });
 
 interface TransactionFormProps {
@@ -54,7 +58,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [selectedDate, setSelectedDate] = useState<Date>(
     initialData?.date || new Date(),
   );
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(
+    initialData?.recurringEndDate || null,
+  );
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isEndDateCalendarOpen, setIsEndDateCalendarOpen] = useState(false);
 
   const {
     register,
@@ -70,15 +78,24 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       category: initialData?.category || "",
       description: initialData?.description || "",
       date: initialData?.date || new Date(),
+      isRecurring: initialData?.isRecurring || false,
+      recurringFrequency: initialData?.recurringFrequency || "monthly",
+      recurringEndDate: initialData?.recurringEndDate || null,
     },
   });
 
   const watchType = watch("type");
+  const watchIsRecurring = watch("isRecurring");
+  const watchRecurringFrequency = watch("recurringFrequency");
   const categories =
     watchType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const onFormSubmit = async (data: TransactionFormData) => {
-    await onSubmit({ ...data, date: selectedDate });
+    await onSubmit({
+      ...data,
+      date: selectedDate,
+      recurringEndDate: selectedEndDate,
+    });
   };
 
   return (
@@ -186,6 +203,88 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             />
           </PopoverContent>
         </Popover>
+      </div>
+
+      {/* Recurring Transaction Section */}
+      <div className="space-y-4 rounded-lg border p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Repeat className="h-4 w-4" />
+            <Label htmlFor="isRecurring" className="text-base font-medium">
+              Recurring Transaction
+            </Label>
+          </div>
+          <Switch
+            id="isRecurring"
+            checked={watchIsRecurring}
+            onCheckedChange={(checked) => setValue("isRecurring", checked)}
+          />
+        </div>
+
+        {watchIsRecurring && (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="recurringFrequency">Frequency</Label>
+              <Select
+                value={watchRecurringFrequency}
+                onValueChange={(value) =>
+                  setValue(
+                    "recurringFrequency",
+                    value as "weekly" | "monthly" | "yearly",
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>End Date (Optional)</Label>
+              <Popover
+                open={isEndDateCalendarOpen}
+                onOpenChange={setIsEndDateCalendarOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedEndDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedEndDate
+                      ? format(selectedEndDate, "PPP")
+                      : "No end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedEndDate}
+                    onSelect={(date) => {
+                      setSelectedEndDate(date);
+                      setValue("recurringEndDate", date);
+                      setIsEndDateCalendarOpen(false);
+                    }}
+                    disabled={(date) => date < selectedDate}
+                    autoFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="mt-1 text-sm text-gray-500">
+                Leave empty for unlimited recurring transactions
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end space-x-3 pt-4">
