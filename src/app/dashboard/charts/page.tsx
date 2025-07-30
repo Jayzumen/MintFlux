@@ -25,7 +25,7 @@ export default function ChartsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<"all" | "month" | "year">(
-    "month",
+    "year",
   );
 
   useEffect(() => {

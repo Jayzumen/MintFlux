@@ -2,6 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 import {
   Card,
   CardContent,
@@ -15,23 +23,58 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 import { AuthGuard } from "@/src/components/AuthGuard";
 import { TransactionForm } from "@/src/components/TransactionForm";
-import { Transaction, TransactionFormData } from "@/src/types/transaction";
+import {
+  Transaction,
+  TransactionFormData,
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+} from "@/src/types/transaction";
 import {
   subscribeToTransactions,
   addTransaction,
   updateTransaction,
   deleteTransaction,
+  deleteAllTransactions,
 } from "@/src/lib/transactions";
 import {
   exportTransactionsToCSV,
-  importTransactionsFromCSV,
+  exportTransactionsToXLSX,
+  importTransactionsFromFile,
   downloadCSV,
+  downloadXLSX,
 } from "@/src/lib/csv";
 import { useAuth } from "@/src/hooks/useAuth";
 import { useToast } from "@/src/hooks/use-toast";
-import { Plus, Edit, Trash2, Download, Upload } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+  Upload,
+  Trash,
+  FileSpreadsheet,
+  Filter,
+  SortAsc,
+  SortDesc,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
 
 export default function TransactionsPage() {
   const { user } = useAuth();
@@ -43,6 +86,21 @@ export default function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+
+  // Filter and sort state
+  const [filters, setFilters] = useState({
+    type: "all" as "all" | "income" | "expense",
+    category: "all",
+    dateFrom: "",
+    dateTo: "",
+    search: "",
+  });
+  const [sortBy, setSortBy] = useState<"date" | "amount" | "description">(
+    "date",
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -119,23 +177,53 @@ export default function TransactionsPage() {
     }
   };
 
+  const handleDeleteAllTransactions = async () => {
+    if (!user) return;
+
+    const { error } = await deleteAllTransactions(user.uid);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "All transactions deleted successfully!",
+      });
+    }
+
+    setIsDeleteAllDialogOpen(false);
+  };
+
   const handleExportCSV = () => {
     const csvContent = exportTransactionsToCSV(transactions);
     downloadCSV(csvContent, "transactions.csv");
     toast({
       title: "Success",
-      description: "Transactions exported successfully!",
+      description: "Transactions exported to CSV successfully!",
     });
   };
 
-  const handleImportCSV = async (
+  const handleExportXLSX = () => {
+    const excelBlob = exportTransactionsToXLSX(transactions);
+    downloadXLSX(excelBlob, "transactions.xlsx");
+    toast({
+      title: "Success",
+      description: "Transactions exported to Excel successfully!",
+    });
+  };
+
+  const handleImportFile = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
     try {
-      const importedTransactions = await importTransactionsFromCSV(file);
+      const importedTransactions = await importTransactionsFromFile(file);
 
       for (const transactionData of importedTransactions) {
         await addTransaction(user.uid, transactionData);
@@ -149,7 +237,7 @@ export default function TransactionsPage() {
       toast({
         title: "Error",
         description:
-          "Failed to import transactions. Please check the file format.",
+          "Failed to import transactions. Please check that your file is a valid CSV or Excel file with the required columns (Date, Type, Category, Description, Amount).",
         variant: "destructive",
       });
     }
@@ -160,6 +248,90 @@ export default function TransactionsPage() {
   const openEditDialog = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setIsEditDialogOpen(true);
+  };
+
+  // Filter and sort logic
+  const filteredAndSortedTransactions = transactions
+    .filter((transaction) => {
+      // Type filter
+      if (filters.type !== "all" && transaction.type !== filters.type) {
+        return false;
+      }
+
+      // Category filter
+      if (
+        filters.category !== "all" &&
+        transaction.category !== filters.category
+      ) {
+        return false;
+      }
+
+      // Date range filter
+      if (filters.dateFrom) {
+        const fromDate = new Date(filters.dateFrom);
+        if (transaction.date < fromDate) {
+          return false;
+        }
+      }
+
+      if (filters.dateTo) {
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999); // End of day
+        if (transaction.date > toDate) {
+          return false;
+        }
+      }
+
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesDescription = transaction.description
+          .toLowerCase()
+          .includes(searchLower);
+        const matchesCategory = transaction.category
+          .toLowerCase()
+          .includes(searchLower);
+        if (!matchesDescription && !matchesCategory) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "date":
+          comparison = a.date.getTime() - b.date.getTime();
+          break;
+        case "amount":
+          comparison = a.amount - b.amount;
+          break;
+        case "description":
+          comparison = a.description.localeCompare(b.description);
+          break;
+      }
+
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+  const clearFilters = () => {
+    setFilters({
+      type: "all",
+      category: "all",
+      dateFrom: "",
+      dateTo: "",
+      search: "",
+    });
+  };
+
+  const getAvailableCategories = () => {
+    const categories = new Set<string>();
+    transactions.forEach((transaction) => {
+      categories.add(transaction.category);
+    });
+    return Array.from(categories).sort();
   };
 
   if (loading) {
@@ -193,29 +365,52 @@ export default function TransactionsPage() {
               </div>
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row md:mt-0">
-                <Button
-                  variant="outline"
-                  onClick={handleExportCSV}
-                  disabled={transactions.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      disabled={transactions.length === 0}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleExportCSV}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleExportXLSX}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export as Excel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 <label className="cursor-pointer">
                   <Button variant="outline" asChild>
                     <span>
                       <Upload className="mr-2 h-4 w-4" />
-                      Import CSV
+                      Import CSV/Excel
                     </span>
                   </Button>
                   <input
                     type="file"
-                    accept=".csv"
-                    onChange={handleImportCSV}
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleImportFile}
                     className="hidden"
                   />
                 </label>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteAllDialogOpen(true)}
+                  disabled={transactions.length === 0}
+                  className="border-red-200 text-red-600 hover:border-red-300 hover:text-red-700"
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete All
+                </Button>
 
                 <Dialog
                   open={isAddDialogOpen}
@@ -241,22 +436,192 @@ export default function TransactionsPage() {
               </div>
             </div>
 
+            {/* Filter and Sort Section */}
+            <Card className="mb-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters & Sort
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFilters(!showFilters)}
+                    >
+                      {showFilters ? "Hide" : "Show"} Filters
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              {showFilters && (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {/* Search */}
+                    <div>
+                      <label className="text-sm font-medium">Search</label>
+                      <Input
+                        placeholder="Search descriptions or categories..."
+                        value={filters.search}
+                        onChange={(e) =>
+                          setFilters({ ...filters, search: e.target.value })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {/* Type Filter */}
+                    <div>
+                      <label className="text-sm font-medium">Type</label>
+                      <Select
+                        value={filters.type}
+                        onValueChange={(value) =>
+                          setFilters({
+                            ...filters,
+                            type: value as "all" | "income" | "expense",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="income">Income</SelectItem>
+                          <SelectItem value="expense">Expense</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Category Filter */}
+                    <div>
+                      <label className="text-sm font-medium">Category</label>
+                      <Select
+                        value={filters.category}
+                        onValueChange={(value) =>
+                          setFilters({ ...filters, category: value })
+                        }
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {getAvailableCategories().map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Sort */}
+                    <div>
+                      <label className="text-sm font-medium">Sort By</label>
+                      <div className="mt-1 flex gap-1">
+                        <Select
+                          value={sortBy}
+                          onValueChange={(value) =>
+                            setSortBy(
+                              value as "date" | "amount" | "description",
+                            )
+                          }
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="date">Date</SelectItem>
+                            <SelectItem value="amount">Amount</SelectItem>
+                            <SelectItem value="description">
+                              Description
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                          }
+                        >
+                          {sortOrder === "asc" ? (
+                            <SortAsc className="h-4 w-4" />
+                          ) : (
+                            <SortDesc className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date Range */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium">Date From</label>
+                      <Input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={(e) =>
+                          setFilters({ ...filters, dateFrom: e.target.value })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Date To</label>
+                      <Input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={(e) =>
+                          setFilters({ ...filters, dateTo: e.target.value })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+
             <Card>
               <CardHeader>
-                <CardTitle>All Transactions</CardTitle>
+                <CardTitle>
+                  {filters.type !== "all" ||
+                  filters.category !== "all" ||
+                  filters.search ||
+                  filters.dateFrom ||
+                  filters.dateTo
+                    ? `Filtered Transactions (${filteredAndSortedTransactions.length})`
+                    : `All Transactions (${transactions.length})`}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {transactions.length === 0 ? (
+                {filteredAndSortedTransactions.length === 0 ? (
                   <div className="py-12 text-center">
-                    <p className="mb-4 text-gray-500">No transactions yet</p>
-                    <Button onClick={() => setIsAddDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Your First Transaction
-                    </Button>
+                    <p className="mb-4 text-gray-500">
+                      {transactions.length === 0
+                        ? "No transactions yet"
+                        : "No transactions match your filters"}
+                    </p>
+                    {transactions.length === 0 ? (
+                      <Button onClick={() => setIsAddDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Your First Transaction
+                      </Button>
+                    ) : (
+                      <Button onClick={clearFilters}>Clear Filters</Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {transactions.map((transaction) => (
+                    {filteredAndSortedTransactions.map((transaction) => (
                       <div
                         key={transaction.id}
                         className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
@@ -343,6 +708,32 @@ export default function TransactionsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteAllDialogOpen}
+        onOpenChange={setIsDeleteAllDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete All Transactions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete all {transactions.length}{" "}
+              transactions? This action cannot be undone and will permanently
+              remove all your transaction history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAllTransactions}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete All Transactions
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AuthGuard>
   );
 }

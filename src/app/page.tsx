@@ -329,7 +329,7 @@ export default function Homepage() {
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Food & Dining</span>
+                      <span className="text-sm">Dining</span>
                       <span className="text-sm font-medium">$680.00</span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -351,7 +351,7 @@ export default function Homepage() {
                   <div className="space-y-3">
                     <div>
                       <div className="mb-1 flex justify-between text-sm">
-                        <span>Food Budget</span>
+                        <span>Dining Budget</span>
                         <span>68%</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">

@@ -58,6 +58,23 @@ export const deleteTransaction = async (id: string) => {
   }
 };
 
+export const deleteAllTransactions = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, "transactions"),
+      where("userId", "==", userId),
+    );
+
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+};
+
 export const subscribeToTransactions = (
   userId: string,
   callback: (transactions: Transaction[]) => void,

@@ -15,6 +15,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/src/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
 import { Progress } from "@/src/components/ui/progress";
 import { AuthGuard } from "@/src/components/AuthGuard";
 import { BudgetAlert } from "@/src/components/BudgetAlert";
@@ -60,6 +70,8 @@ export default function BudgetPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
 
   const {
     register,
@@ -178,10 +190,15 @@ export default function BudgetPage() {
     setIsSubmitting(false);
   };
 
-  const handleDeleteBudget = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this budget?")) return;
+  const handleDeleteBudget = async (budget: Budget) => {
+    setBudgetToDelete(budget);
+    setIsDeleteDialogOpen(true);
+  };
 
-    const { error } = await deleteBudget(id);
+  const confirmDeleteBudget = async () => {
+    if (!budgetToDelete) return;
+
+    const { error } = await deleteBudget(budgetToDelete.id);
 
     if (error) {
       toast({
@@ -195,6 +212,9 @@ export default function BudgetPage() {
         description: "Budget deleted successfully!",
       });
     }
+
+    setIsDeleteDialogOpen(false);
+    setBudgetToDelete(null);
   };
 
   const openEditDialog = (budget: Budget) => {
@@ -410,7 +430,7 @@ export default function BudgetPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDeleteBudget(budget.id)}
+                              onClick={() => handleDeleteBudget(budget)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -553,6 +573,34 @@ export default function BudgetPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Budget</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the budget for{" "}
+              <span className="font-semibold">{budgetToDelete?.category}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBudgetToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteBudget}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Budget
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AuthGuard>
   );
 }
