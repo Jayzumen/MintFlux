@@ -33,14 +33,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/src/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/src/components/ui/popover";
 import { AuthGuard } from "@/src/components/AuthGuard";
 import { TransactionForm } from "@/src/components/TransactionForm";
 import {
   Transaction,
   TransactionFormData,
   RecurringTransaction,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
 } from "@/src/types/transaction";
 import {
   subscribeToTransactions,
@@ -78,6 +81,7 @@ import {
   SortAsc,
   SortDesc,
   Repeat,
+  CalendarIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,6 +89,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
+import { Label } from "@/src/components/ui/label";
+import { Calendar } from "@/src/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/src/lib/utils";
 
 export default function TransactionsPage() {
   const { user } = useAuth();
@@ -116,6 +124,16 @@ export default function TransactionsPage() {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Calendar state
+  const [selectedDateFrom, setSelectedDateFrom] = useState<Date | undefined>(
+    undefined,
+  );
+  const [selectedDateTo, setSelectedDateTo] = useState<Date | undefined>(
+    undefined,
+  );
+  const [isDateFromCalendarOpen, setIsDateFromCalendarOpen] = useState(false);
+  const [isDateToCalendarOpen, setIsDateToCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -358,15 +376,14 @@ export default function TransactionsPage() {
       }
 
       // Date range filter
-      if (filters.dateFrom) {
-        const fromDate = new Date(filters.dateFrom);
-        if (transaction.date < fromDate) {
+      if (selectedDateFrom) {
+        if (transaction.date < selectedDateFrom) {
           return false;
         }
       }
 
-      if (filters.dateTo) {
-        const toDate = new Date(filters.dateTo);
+      if (selectedDateTo) {
+        const toDate = new Date(selectedDateTo);
         toDate.setHours(23, 59, 59, 999); // End of day
         if (transaction.date > toDate) {
           return false;
@@ -415,6 +432,8 @@ export default function TransactionsPage() {
       dateTo: "",
       search: "",
     });
+    setSelectedDateFrom(undefined);
+    setSelectedDateTo(undefined);
   };
 
   const getAvailableCategories = () => {
@@ -670,26 +689,73 @@ export default function TransactionsPage() {
                   {/* Date Range */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-medium">Date From</label>
-                      <Input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={(e) =>
-                          setFilters({ ...filters, dateFrom: e.target.value })
-                        }
-                        className="mt-1"
-                      />
+                      <Label>Date From</Label>
+                      <Popover
+                        open={isDateFromCalendarOpen}
+                        onOpenChange={setIsDateFromCalendarOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "mt-1 w-full justify-start text-left font-normal",
+                              !selectedDateFrom && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDateFrom
+                              ? format(selectedDateFrom, "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDateFrom}
+                            onSelect={(date: Date | undefined) => {
+                              setSelectedDateFrom(date);
+                              setIsDateFromCalendarOpen(false);
+                            }}
+                            autoFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Date To</label>
-                      <Input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={(e) =>
-                          setFilters({ ...filters, dateTo: e.target.value })
-                        }
-                        className="mt-1"
-                      />
+                      <Label>Date To</Label>
+                      <Popover
+                        open={isDateToCalendarOpen}
+                        onOpenChange={setIsDateToCalendarOpen}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "mt-1 w-full justify-start text-left font-normal",
+                              !selectedDateTo && "text-muted-foreground",
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDateTo
+                              ? format(selectedDateTo, "PPP")
+                              : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDateTo}
+                            onSelect={(date: Date | undefined) => {
+                              setSelectedDateTo(date);
+                              setIsDateToCalendarOpen(false);
+                            }}
+                            disabled={(date: Date) =>
+                              selectedDateFrom ? date < selectedDateFrom : false
+                            }
+                            autoFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </CardContent>
@@ -702,8 +768,8 @@ export default function TransactionsPage() {
                   {filters.type !== "all" ||
                   filters.category !== "all" ||
                   filters.search ||
-                  filters.dateFrom ||
-                  filters.dateTo
+                  selectedDateFrom ||
+                  selectedDateTo
                     ? `Filtered Transactions (${filteredAndSortedTransactions.length})`
                     : `All Transactions (${transactions.length})`}
                 </CardTitle>
