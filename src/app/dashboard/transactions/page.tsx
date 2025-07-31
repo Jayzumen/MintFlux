@@ -894,14 +894,21 @@ export default function TransactionsPage() {
                                 {recurringTransaction.endDate &&
                                   ` - ${recurringTransaction.endDate.toLocaleDateString()}`}
                               </p>
-                              <p className="text-xs text-blue-600 dark:text-blue-400">
-                                Next:{" "}
-                                {getNextOccurrenceDate(
-                                  recurringTransaction.startDate,
-                                  recurringTransaction.frequency,
-                                  recurringTransaction.lastProcessedDate,
-                                ).toLocaleDateString()}
-                              </p>
+                              {recurringTransaction.isActive ? (
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                  Next:{" "}
+                                  {getNextOccurrenceDate(
+                                    recurringTransaction.startDate,
+                                    recurringTransaction.frequency,
+                                    recurringTransaction.lastProcessedDate,
+                                  ).toLocaleDateString()}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-red-600 dark:text-red-400">
+                                  Ended on:{" "}
+                                  {recurringTransaction.endDate?.toLocaleDateString()}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
