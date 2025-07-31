@@ -16,7 +16,7 @@ import { subscribeToTransactions } from "@/src/lib/transactions";
 import { subscribeToBudgets } from "@/src/lib/budgets";
 import { useAuth } from "@/src/hooks/useAuth";
 import { useUserSettings } from "@/src/hooks/useUserSettings";
-import { DollarSign, TrendingUp, TrendingDown, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, Banknote } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -155,7 +155,7 @@ export default function DashboardPage() {
                     <span className="text-2xl font-bold">
                       {formatCurrency(netWorth)}
                     </span>
-                    <DollarSign className="h-6 w-6 opacity-80" />
+                    <Banknote className="h-6 w-6 opacity-80" />
                   </div>
                 </CardContent>
               </Card>
