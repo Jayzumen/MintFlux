@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { Textarea } from "@/src/components/ui/textarea";
-import { Calendar } from "@/src/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +29,7 @@ import {
   INCOME_CATEGORIES,
 } from "@/src/types/transaction";
 import { Switch } from "@/src/components/ui/switch";
+import { Calendar } from "./ui/calendar";
 
 const transactionSchema = z.object({
   amount: z.number().min(0.01, "Amount must be greater than 0"),
@@ -194,7 +194,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             <Calendar
               mode="single"
               selected={selectedDate}
-              onSelect={(date) => {
+              onSelect={(date: Date | undefined) => {
                 setSelectedDate(date || new Date());
                 setValue("date", date || new Date());
                 setIsCalendarOpen(false);
@@ -246,7 +246,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
 
             <div>
-              <Label>End Date (Optional)</Label>
+              <Label htmlFor="recurringEndDate">End Date (Optional)</Label>
               <Popover
                 open={isEndDateCalendarOpen}
                 onOpenChange={setIsEndDateCalendarOpen}
@@ -254,6 +254,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    id="recurringEndDate"
                     className={cn(
                       "w-full justify-start text-left font-normal",
                       !selectedEndDate && "text-muted-foreground",
@@ -265,16 +266,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       : "No end date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={selectedEndDate || undefined}
-                    onSelect={(date) => {
+                    onSelect={(date: Date | undefined) => {
                       setSelectedEndDate(date || null);
                       setValue("recurringEndDate", date);
                       setIsEndDateCalendarOpen(false);
                     }}
-                    disabled={(date) => date < selectedDate}
+                    disabled={(date: Date) => date < selectedDate}
                     autoFocus
                   />
                 </PopoverContent>
