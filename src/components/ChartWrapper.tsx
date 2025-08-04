@@ -109,7 +109,10 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => [formatCurrency(value), "Amount"]}
+                formatter={(value: number, name: string) => [
+                  formatCurrency(value),
+                  name,
+                ]}
               />
             </PieChart>
           </ResponsiveContainer>
