@@ -110,6 +110,7 @@ export default function TransactionsPage() {
     useState<Transaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+  const [showTransactions, setShowTransactions] = useState(true);
 
   // Filter and sort state
   const [filters, setFilters] = useState({
@@ -764,7 +765,7 @@ export default function TransactionsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>
+                <CardTitle className="flex items-center justify-between">
                   {filters.type !== "all" ||
                   filters.category !== "all" ||
                   filters.search ||
@@ -772,6 +773,14 @@ export default function TransactionsPage() {
                   selectedDateTo
                     ? `Filtered Transactions (${filteredAndSortedTransactions.length})`
                     : `All Transactions (${transactions.length})`}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setShowTransactions(!showTransactions)}
+                  >
+                    {showTransactions ? "Hide" : "Show"} Transactions
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -793,66 +802,67 @@ export default function TransactionsPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {filteredAndSortedTransactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`h-3 w-3 rounded-full ${
+                    {showTransactions &&
+                      filteredAndSortedTransactions.map((transaction) => (
+                        <div
+                          key={transaction.id}
+                          className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`h-3 w-3 rounded-full ${
+                                  transaction.type === "income"
+                                    ? "bg-green-500"
+                                    : "bg-red-500"
+                                }`}
+                              />
+                              <div>
+                                <p className="font-medium">
+                                  {transaction.description}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {transaction.category} •{" "}
+                                  {transaction.date.toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <span
+                              className={`font-medium ${
                                 transaction.type === "income"
-                                  ? "bg-green-500"
-                                  : "bg-red-500"
+                                  ? "text-green-600"
+                                  : "text-red-600"
                               }`}
-                            />
-                            <div>
-                              <p className="font-medium">
-                                {transaction.description}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {transaction.category} •{" "}
-                                {transaction.date.toLocaleDateString()}
-                              </p>
+                            >
+                              {transaction.type === "income" ? "+" : "-"}
+                              {formatCurrency(transaction.amount)}
+                            </span>
+
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditDialog(transaction)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleDeleteTransaction(transaction.id)
+                                }
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                          <span
-                            className={`font-medium ${
-                              transaction.type === "income"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {transaction.type === "income" ? "+" : "-"}
-                            {formatCurrency(transaction.amount)}
-                          </span>
-
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(transaction)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleDeleteTransaction(transaction.id)
-                              }
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
               </CardContent>
