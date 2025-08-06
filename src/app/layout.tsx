@@ -8,7 +8,7 @@ import { Toaster } from "@/src/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Personal Finance Tracker MintFlux",
+  title: "MintFlux",
   description: "Track your finances with ease on MintFlux",
 };
 
