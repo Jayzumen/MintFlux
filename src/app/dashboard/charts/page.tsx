@@ -106,7 +106,7 @@ export default function ChartsPage() {
                 </p>
               </div>
 
-              <div className="mt-4 flex gap-2 md:mt-0">
+              <div className="mt-4 flex flex-col gap-2 md:mt-0 md:flex-row">
                 <Button
                   variant={dateFilter === "all" ? "default" : "outline"}
                   onClick={() => setDateFilter("all")}
