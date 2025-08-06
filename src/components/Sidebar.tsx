@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -17,6 +17,8 @@ import { Button } from "@/src/components/ui/button";
 import { signOut } from "@/src/lib/auth";
 import { useAuth } from "@/src/hooks/useAuth";
 import { cn } from "@/src/lib/utils";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 const navigation = [
   { name: "Overview", href: "/dashboard/overview", icon: Home },
@@ -30,6 +32,23 @@ export const Sidebar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useAuth();
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUserData = async () => {
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          setUserName(userDoc.data()?.displayName);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+    fetchUserData();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,7 +84,7 @@ export const Sidebar = () => {
               MintFlux
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Welcome, {user?.email}
+              Welcome, {userName ? userName : user?.email}
             </p>
           </div>
 
