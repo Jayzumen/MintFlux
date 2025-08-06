@@ -463,7 +463,7 @@ export default function TransactionsPage() {
   return (
     <AuthGuard>
       <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-        <main className="ml-0 flex-1 p-6 md:ml-64">
+        <main className="ml-0 flex-1 px-2 py-6 md:ml-64 md:px-6">
           <div className="mx-auto max-w-7xl">
             <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
               <div>
@@ -475,7 +475,7 @@ export default function TransactionsPage() {
                 </p>
               </div>
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row md:mt-0">
+              <div className="mx-auto mt-4 flex flex-col gap-3 sm:flex-row md:mt-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -565,7 +565,7 @@ export default function TransactionsPage() {
             {/* Filter and Sort Section */}
             <Card className="mb-6">
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col items-center justify-between md:flex-row">
                   <CardTitle className="flex items-center gap-2">
                     <Filter className="h-5 w-5" />
                     Filters & Sort
@@ -765,7 +765,7 @@ export default function TransactionsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex flex-col items-center justify-between md:flex-row">
                   {filters.type !== "all" ||
                   filters.category !== "all" ||
                   filters.search ||
@@ -776,7 +776,7 @@ export default function TransactionsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="ml-auto"
+                    className="md:ml-auto"
                     onClick={() => setShowTransactions(!showTransactions)}
                   >
                     {showTransactions ? "Hide" : "Show"} Transactions
@@ -806,7 +806,7 @@ export default function TransactionsPage() {
                       filteredAndSortedTransactions.map((transaction) => (
                         <div
                           key={transaction.id}
-                          className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700"
+                          className="flex flex-col items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100 md:flex-row dark:bg-gray-800 dark:hover:bg-gray-700"
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-3">
@@ -882,7 +882,7 @@ export default function TransactionsPage() {
                     {recurringTransactions.map((recurringTransaction) => (
                       <div
                         key={recurringTransaction.id}
-                        className="flex items-center justify-between rounded-lg bg-blue-50 p-4 transition-colors hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
+                        className="flex flex-col items-center justify-between rounded-lg bg-blue-50 p-4 transition-colors hover:bg-blue-100 md:flex-row dark:bg-blue-900/20 dark:hover:bg-blue-900/30"
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
