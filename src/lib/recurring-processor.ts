@@ -1,6 +1,5 @@
 import {
   getRecurringTransactions,
-  shouldProcessRecurringTransaction,
   getNextOccurrenceDate,
   updateRecurringTransaction,
 } from "./recurring-transactions";
