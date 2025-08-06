@@ -62,7 +62,7 @@ export const Sidebar = () => {
         <div className="flex h-full flex-col">
           <div className="border-border border-b p-6">
             <h2 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-xl font-bold text-transparent">
-              Finance Tracker
+              MintFlux
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
               Welcome, {user?.email}

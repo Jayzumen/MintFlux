@@ -86,9 +86,7 @@ export default function LoginPage() {
           <CardTitle className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
             Welcome Back
           </CardTitle>
-          <CardDescription>
-            Sign in to your finance tracker account
-          </CardDescription>
+          <CardDescription>Sign in to your MintFlux account</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">

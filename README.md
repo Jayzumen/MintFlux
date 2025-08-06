@@ -1,4 +1,4 @@
-# Personal Finance Tracker
+# Personal Finance Tracker "MintFlux"
 
 A modern, full-featured personal finance tracker built with Next.js 15, React, TypeScript, Tailwind CSS, and Firebase. Track your income, expenses, budgets, and visualize your financial data with beautiful charts.
 

@@ -86,9 +86,7 @@ export default function RegisterPage() {
           <CardTitle className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
             Create Account
           </CardTitle>
-          <CardDescription>
-            Sign up for your finance tracker account
-          </CardDescription>
+          <CardDescription>Sign up for your MintFlux account</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

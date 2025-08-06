@@ -122,7 +122,7 @@ export default function Homepage() {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-2xl font-bold text-transparent">
-                  Finance Tracker
+                  MintFlux
                 </h1>
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function Homepage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h3 className="mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-2xl font-bold text-transparent">
-              Finance Tracker
+              MintFlux
             </h3>
             <p className="mb-6 text-gray-400">
               Empowering you to make better financial decisions.

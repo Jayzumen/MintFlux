@@ -8,8 +8,8 @@ import { Toaster } from "@/src/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Personal Finance Tracker",
-  description: "Track your finances with ease",
+  title: "Personal Finance Tracker MintFlux",
+  description: "Track your finances with ease on MintFlux",
 };
 
 export default function RootLayout({
