@@ -44,19 +44,25 @@ import {
   Transaction,
   TransactionFormData,
   RecurringTransaction,
+  RecurringTransactionChange,
 } from "@/src/types/transaction";
+import { EditRecurringTransactionForm } from "@/src/components/EditRecurringTransactionForm";
 import {
   subscribeToTransactions,
   addTransaction,
   updateTransaction,
   deleteTransaction,
   deleteAllTransactions,
+  updateLinkedTransactions,
 } from "@/src/lib/transactions";
 import {
   addRecurringTransaction,
   subscribeToRecurringTransactions,
   deleteRecurringTransaction,
   getNextOccurrenceDate,
+  addChangeToRecurringTransaction,
+  updateRecurringTransaction,
+  getEffectiveValues,
 } from "@/src/lib/recurring-transactions";
 import {
   exportTransactionsToCSV,
@@ -111,6 +117,10 @@ export default function TransactionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [showTransactions, setShowTransactions] = useState(true);
+  const [isEditRecurringDialogOpen, setIsEditRecurringDialogOpen] =
+    useState(false);
+  const [editingRecurringTransaction, setEditingRecurringTransaction] =
+    useState<RecurringTransaction | null>(null);
 
   // Filter and sort state
   const [filters, setFilters] = useState({
@@ -166,19 +176,9 @@ export default function TransactionsPage() {
     setIsSubmitting(true);
 
     try {
-      // Add the regular transaction
-      const { error: transactionError } = await addTransaction(user.uid, data);
+      let recurringId: string | undefined;
 
-      if (transactionError) {
-        toast({
-          title: "Error",
-          description: transactionError,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // If it's a recurring transaction, create the recurring template
+      // If recurring, create the template first so we can link the transaction
       if (data.isRecurring && data.recurringFrequency) {
         const recurringData = {
           amount: data.amount,
@@ -192,7 +192,7 @@ export default function TransactionsPage() {
           lastProcessedDate: data.date,
         };
 
-        const { error: recurringError } = await addRecurringTransaction(
+        const { id, error: recurringError } = await addRecurringTransaction(
           user.uid,
           recurringData,
         );
@@ -201,21 +201,34 @@ export default function TransactionsPage() {
           toast({
             title: "Warning",
             description:
-              "Transaction added but recurring setup failed: " + recurringError,
+              "Recurring setup failed: " + recurringError,
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "Success",
-            description: "Recurring transaction added successfully!",
-          });
+          recurringId = id ?? undefined;
         }
-      } else {
-        toast({
-          title: "Success",
-          description: "Transaction added successfully!",
-        });
       }
+
+      const { error: transactionError } = await addTransaction(user.uid, {
+        ...data,
+        recurringId,
+      });
+
+      if (transactionError) {
+        toast({
+          title: "Error",
+          description: transactionError,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: data.isRecurring
+          ? "Recurring transaction added successfully!"
+          : "Transaction added successfully!",
+      });
 
       setIsAddDialogOpen(false);
     } catch (error) {
@@ -285,6 +298,103 @@ export default function TransactionsPage() {
         description: "Recurring transaction deleted successfully!",
       });
     }
+  };
+
+  const openEditRecurringDialog = (rt: RecurringTransaction) => {
+    setEditingRecurringTransaction(rt);
+    setIsEditRecurringDialogOpen(true);
+  };
+
+  const handleEditRecurringTransaction = async (
+    change: RecurringTransactionChange,
+    newEndDate?: Date | null,
+  ) => {
+    if (!editingRecurringTransaction) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const hasFieldChanges =
+        change.amount !== undefined ||
+        change.type !== undefined ||
+        change.category !== undefined ||
+        change.description !== undefined;
+
+      if (hasFieldChanges) {
+        const { error } = await addChangeToRecurringTransaction(
+          editingRecurringTransaction.id,
+          editingRecurringTransaction.changes ?? [],
+          change,
+        );
+        if (error) {
+          toast({
+            title: "Error",
+            description: error,
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const updates: {
+          amount?: number;
+          type?: "income" | "expense";
+          category?: string;
+          description?: string;
+        } = {};
+        if (change.amount !== undefined) updates.amount = change.amount;
+        if (change.type !== undefined) updates.type = change.type;
+        if (change.category !== undefined) updates.category = change.category;
+        if (change.description !== undefined)
+          updates.description = change.description;
+
+        const { error: linkError } = await updateLinkedTransactions(
+          editingRecurringTransaction.id,
+          change.effectiveDate,
+          updates,
+        );
+        if (linkError) {
+          toast({
+            title: "Warning",
+            description:
+              "Recurring template updated but some existing transactions could not be updated: " +
+              linkError,
+            variant: "destructive",
+          });
+        }
+      }
+
+      if (newEndDate !== undefined) {
+        const { error } = await updateRecurringTransaction(
+          editingRecurringTransaction.id,
+          { endDate: newEndDate },
+        );
+        if (error) {
+          toast({
+            title: "Error",
+            description: error,
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Recurring transaction updated successfully!",
+      });
+      setIsEditRecurringDialogOpen(false);
+      setEditingRecurringTransaction(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update recurring transaction",
+        variant: "destructive",
+      });
+    }
+
+    setIsSubmitting(false);
   };
 
   const handleDeleteAllTransactions = async () => {
@@ -888,17 +998,17 @@ export default function TransactionsPage() {
                           <div className="flex items-center gap-3">
                             <div
                               className={`h-3 w-3 rounded-full ${
-                                recurringTransaction.type === "income"
+                                getEffectiveValues(recurringTransaction, new Date()).type === "income"
                                   ? "bg-green-500"
                                   : "bg-red-500"
                               }`}
                             />
                             <div>
                               <p className="font-medium">
-                                {recurringTransaction.description}
+                                {getEffectiveValues(recurringTransaction, new Date()).description}
                               </p>
                               <p className="text-sm text-gray-500">
-                                {recurringTransaction.category} •{" "}
+                                {getEffectiveValues(recurringTransaction, new Date()).category} •{" "}
                                 {recurringTransaction.frequency} •{" "}
                                 {recurringTransaction.startDate.toLocaleDateString()}
                                 {recurringTransaction.endDate &&
@@ -923,7 +1033,7 @@ export default function TransactionsPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4">
                           <span
                             className={`font-medium ${
                               recurringTransaction.type === "income"
@@ -932,10 +1042,21 @@ export default function TransactionsPage() {
                             }`}
                           >
                             {recurringTransaction.type === "income" ? "+" : "-"}
-                            {formatCurrency(recurringTransaction.amount)}
+                            {formatCurrency(
+                              getEffectiveValues(recurringTransaction, new Date()).amount,
+                            )}
                           </span>
 
                           <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                openEditRecurringDialog(recurringTransaction)
+                              }
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -973,6 +1094,29 @@ export default function TransactionsPage() {
               onCancel={() => {
                 setIsEditDialogOpen(false);
                 setEditingTransaction(null);
+              }}
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Recurring Dialog */}
+      <Dialog
+        open={isEditRecurringDialogOpen}
+        onOpenChange={setIsEditRecurringDialogOpen}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Recurring Transaction</DialogTitle>
+          </DialogHeader>
+          {editingRecurringTransaction && (
+            <EditRecurringTransactionForm
+              recurringTransaction={editingRecurringTransaction}
+              onSubmit={handleEditRecurringTransaction}
+              onCancel={() => {
+                setIsEditRecurringDialogOpen(false);
+                setEditingRecurringTransaction(null);
               }}
               isSubmitting={isSubmitting}
             />

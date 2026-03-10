@@ -101,6 +101,38 @@ export const subscribeToTransactions = (
   });
 };
 
+export const updateLinkedTransactions = async (
+  recurringId: string,
+  effectiveDate: Date,
+  updates: {
+    amount?: number;
+    type?: "income" | "expense";
+    category?: string;
+    description?: string;
+  },
+): Promise<{ updated: number; error: string | null }> => {
+  try {
+    const q = query(
+      collection(db, "transactions"),
+      where("recurringId", "==", recurringId),
+      where("date", ">=", Timestamp.fromDate(effectiveDate)),
+    );
+
+    const snapshot = await getDocs(q);
+    const updatePromises = snapshot.docs.map((docSnapshot) =>
+      updateDoc(doc(db, "transactions", docSnapshot.id), {
+        ...updates,
+        updatedAt: Timestamp.now(),
+      }),
+    );
+    await Promise.all(updatePromises);
+
+    return { updated: snapshot.size, error: null };
+  } catch (error: any) {
+    return { updated: 0, error: error.message };
+  }
+};
+
 export const getTransactionsByDateRange = async (
   userId: string,
   startDate: Date,

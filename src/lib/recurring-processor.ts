@@ -1,6 +1,7 @@
 import {
   getRecurringTransactions,
   getNextOccurrenceDate,
+  getEffectiveValues,
   updateRecurringTransaction,
 } from "./recurring-transactions";
 import { addTransaction } from "./transactions";
@@ -42,13 +43,14 @@ export class RecurringTransactionProcessor {
           (!recurringTransaction.endDate || nextDate <= currentDate) &&
           nextDate <= currentDate
         ) {
-          // 1. Create the transaction for nextDate
+          const effective = getEffectiveValues(recurringTransaction, nextDate);
           const transactionData = {
-            amount: recurringTransaction.amount,
-            type: recurringTransaction.type,
-            category: recurringTransaction.category,
-            description: recurringTransaction.description,
+            amount: effective.amount,
+            type: effective.type,
+            category: effective.category,
+            description: effective.description,
             date: nextDate,
+            recurringId: recurringTransaction.id,
           };
           await addTransaction(userId, transactionData);
 

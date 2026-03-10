@@ -21,6 +21,15 @@ export interface TransactionFormData {
   isRecurring?: boolean;
   recurringFrequency?: "weekly" | "monthly" | "yearly";
   recurringEndDate?: Date | null;
+  recurringId?: string;
+}
+
+export interface RecurringTransactionChange {
+  effectiveDate: Date;
+  amount?: number;
+  type?: "income" | "expense";
+  category?: string;
+  description?: string;
 }
 
 export interface RecurringTransaction {
@@ -35,6 +44,7 @@ export interface RecurringTransaction {
   endDate?: Date | null;
   isActive: boolean;
   lastProcessedDate?: Date;
+  changes?: RecurringTransactionChange[];
   createdAt: Date;
   updatedAt: Date;
 }
