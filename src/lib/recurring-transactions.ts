@@ -12,21 +12,66 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { RecurringTransaction } from "@/src/types/transaction";
+import {
+  RecurringTransaction,
+  RecurringTransactionChange,
+} from "@/src/types/transaction";
+
+const serializeChanges = (
+  changes: RecurringTransactionChange[],
+): object[] => {
+  return changes.map((change) => ({
+    ...change,
+    effectiveDate: Timestamp.fromDate(change.effectiveDate),
+  }));
+};
+
+const deserializeChanges = (raw: any[]): RecurringTransactionChange[] => {
+  if (!raw) return [];
+  return raw.map((change) => ({
+    ...change,
+    effectiveDate: change.effectiveDate.toDate(),
+  }));
+};
+
+export const getEffectiveValues = (
+  recurring: RecurringTransaction,
+  forDate: Date,
+): { amount: number; type: "income" | "expense"; category: string; description: string } => {
+  let { amount, type, category, description } = recurring;
+
+  if (recurring.changes?.length) {
+    const sorted = [...recurring.changes].sort(
+      (a, b) => a.effectiveDate.getTime() - b.effectiveDate.getTime(),
+    );
+    for (const change of sorted) {
+      if (change.effectiveDate <= forDate) {
+        if (change.amount !== undefined) amount = change.amount;
+        if (change.type !== undefined) type = change.type;
+        if (change.category !== undefined) category = change.category;
+        if (change.description !== undefined) description = change.description;
+      }
+    }
+  }
+
+  return { amount, type, category, description };
+};
 
 export const addRecurringTransaction = async (
   userId: string,
   data: Omit<RecurringTransaction, "id" | "userId" | "createdAt" | "updatedAt">,
 ) => {
   try {
+    const { changes, ...rest } = data;
     const docRef = await addDoc(collection(db, "recurringTransactions"), {
-      ...data,
+      ...rest,
       userId,
       startDate: Timestamp.fromDate(data.startDate),
       endDate: data.endDate ? Timestamp.fromDate(data.endDate) : null,
       lastProcessedDate: data.lastProcessedDate
         ? Timestamp.fromDate(data.lastProcessedDate)
         : null,
+      changes: changes ? serializeChanges(changes) : [],
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
@@ -42,8 +87,9 @@ export const updateRecurringTransaction = async (
 ) => {
   try {
     const docRef = doc(db, "recurringTransactions", id);
+    const { changes, ...rest } = data;
     const updateData: any = {
-      ...data,
+      ...rest,
       updatedAt: Timestamp.now(),
     };
 
@@ -60,12 +106,29 @@ export const updateRecurringTransaction = async (
         ? Timestamp.fromDate(data.lastProcessedDate)
         : null;
     }
+    if (changes !== undefined) {
+      updateData.changes = serializeChanges(changes);
+    }
 
     await updateDoc(docRef, updateData);
     return { error: null };
   } catch (error: any) {
     return { error: error.message };
   }
+};
+
+export const addChangeToRecurringTransaction = async (
+  id: string,
+  existingChanges: RecurringTransactionChange[],
+  newChange: RecurringTransactionChange,
+) => {
+  const filtered = existingChanges.filter(
+    (c) => c.effectiveDate.getTime() !== newChange.effectiveDate.getTime(),
+  );
+  const updatedChanges = [...filtered, newChange].sort(
+    (a, b) => a.effectiveDate.getTime() - b.effectiveDate.getTime(),
+  );
+  return updateRecurringTransaction(id, { changes: updatedChanges });
 };
 
 export const deleteRecurringTransaction = async (id: string) => {
@@ -97,6 +160,7 @@ export const subscribeToRecurringTransactions = (
         startDate: data.startDate.toDate(),
         endDate: data.endDate?.toDate(),
         lastProcessedDate: data.lastProcessedDate?.toDate(),
+        changes: deserializeChanges(data.changes),
         createdAt: data.createdAt.toDate(),
         updatedAt: data.updatedAt.toDate(),
       } as RecurringTransaction);
@@ -125,6 +189,7 @@ export const getRecurringTransactions = async (
         startDate: data.startDate.toDate(),
         endDate: data.endDate?.toDate(),
         lastProcessedDate: data.lastProcessedDate?.toDate(),
+        changes: deserializeChanges(data.changes),
         createdAt: data.createdAt.toDate(),
         updatedAt: data.updatedAt.toDate(),
       } as RecurringTransaction);
