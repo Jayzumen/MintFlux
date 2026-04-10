@@ -19,9 +19,11 @@ export const addTransaction = async (
   data: TransactionFormData,
 ) => {
   try {
+    const { recurringId, ...rest } = data;
     const docRef = await addDoc(collection(db, "transactions"), {
-      ...data,
+      ...rest,
       userId,
+      ...(recurringId ? { recurringId } : {}),
       date: Timestamp.fromDate(data.date),
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
